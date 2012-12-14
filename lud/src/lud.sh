@@ -24,7 +24,7 @@ while true ; do
 					 "Register your udid2 for Universal Monetary Dividend" \
 					 "Change registered key for Universal Monetary Dividend" \
 					 "Generate/Check an udid2" \
-					 "Vouch (or no longer vouch) for someone else" \
+					 "Sign or Vouch someone else" \
 					 "Synchronyse Monetary creation" \
 					 "Check the local balance of your account(s)" \
 					 "Make and send a transaction file" \
@@ -35,50 +35,86 @@ while true ; do
 	case $? in
 	  1)
 		$lud_gpg --keyserver "${KeyServList[0]}" --send-keys $mymainkeys
-		read -t 5
+		read -t 3
 		;;
 	  2)
 		echo "Sorry: Not implemented yet." >&2
-		read -t 5
+		read -t 3
 		;;
 	  3)
-		
 		. lud_generator.env
 		lud_generator_udid
-		read -t 5
+		read -t 3
 		;;
 	  4)
-		# What is its udid2 ?
+		while true ; do 
+			read -p " Do you know its udid2 (y/n) ? " rep
+			case "$rep" in
+			[yYoO]*)
+				read -p " Which is ? (udid2;c;...) ? " itsudid
+				if ! grep "^udid2;c;[A-Z]\{1,20\};[A-Z-]\{1,20\};[0-9-]\{10\};[0-9.e+-]\{14\};[0-9]\+;\?$" <(echo $itsudid) > /dev/null ; then
+					echo "Warning: this id ($myudid) is not a valid udid2" >&2
+				fi
+				break
+				;;
+			[nN]*)
+				. lud_generator.env
+				itsudid="$(lud_generator_udid | sed -n 1p )"
+				echo -e "$itsudid\n"
+				break
+				;;
+			*) echo "  please answer \"yes\" or \"no\"" >&2 ;;
+			esac
+		done
+		itsudid="${itsudid%;}" #remove last ';' if present.
+
+		keylist="$(curl -sS "${KeyServList[0]#*//}:11371/pks/lookup?op=index&options=mr&search=$(echo "$itsudid" | ${0%/*}/urlencode.sed)" | grep "^\(pub:\|uid:\)")"
+		if [[ "$keylist" != pub:* ]] ; then 
+			echo "Error: \"$itsudid\" not found on the keyserver ${KeyServList[0]}"
+			continue
+		else
+			keylist=$( echo "$keylist" | awk ' { if (NR==1)  { sub("^pub:","\"pub:") } else  { sub("^pub:","\" \"pub:") } ; print } END { print "\"" } ' )
+			eval keylist=("$keylist") # put the different keys/certs in a array.
+			lud_utils_chooseinlist "Which certificate you want to sign ?" 1 "${keylist[@]}"
+			itspub=$( echo "${keylist[$(($?-1))]}" | sed -n 's,^pub:\([^:]*\).*,\1,p' )
+			$lud_gpg --keyserver "${KeyServList[0]}" --recv-keys "$itspub"
+			if [ "${mymainkeys[1]}" ] ; then
+				lud_utils_chooseinlist "Using which of your keys ?" 1 "${mymainkeys[@]}"
+				$lud_gpg --sign-key -u "${mymainkeys[$(($?-1))]}"\! "$itspub" 
+			else
+				$lud_gpg --sign-key -u "${mymainkeys[0]}"\! "$itspub" 
+			fi
+			$lud_gpg --keyserver "${KeyServList[0]}" --send-keys "$itspub"
+		fi
 		# When did you see this individual last time ?
 		# Was she/he dead or alive ?
 		# gpg --sign-key -N _dead@-=2011-10-24 -u mykey\! it's_udid2
-		echo "Sorry: Not implemented yet." >&2
-		read -t 5
+		read -t 3
 		;;
 #	  5)
 #		# gpg --sign-key -N _alive@-=2011-10-24 -N '!Iam@voucher=2011-10-12' -u mykey\! it's_udid2
 #		echo "Sorry: Not implemented yet." >&2
-#		read -t 5
+#		read -t 3
 #		;;
 	  5)
 		#UDsyncCreation
 		echo "Sorry: Not implemented yet." >&2
-		read -t 5
+		read -t 3
 		;;
 	  6)
 		echo "Sorry: Not implemented yet." >&2
-		read -t 5
+		read -t 3
 		continue
 	  [[ "${myaccounts[0]}" ]] || echo "No account found."
 		for account in "${myaccounts[@]}" ; do
 			echo -n "$account: "
 			lud_wallet_freadbalance "$account"
 		done
-		read -t 5
+		read -t 3
 		;;
 	  7)
 		echo "Sorry: Not implemented yet." >&2
-		read -t 5
+		read -t 3
 		continue
 		if ((${#myaccounts[@]}>1)) ; then
 			lud_utils_chooseinlist "From which account ?" 1 "${myaccounts[@]}" >&2
@@ -124,12 +160,12 @@ while true ; do
 		fi
 		;;
 	  8)
-		read -t 5
+		read -t 3
 		continue
 		read -p "filename ? "
 		UDvalidate "$REPLY"
 		#echo "function UDvalidate return $?"
-		read -t 5
+		read -t 3
 		;;
 	  9)
 		break
