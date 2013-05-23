@@ -92,14 +92,13 @@ http[s]://Node[:port]/...
 |   |   |-- initkeys
 |   |   |-- last/
 |   |   `-- [CREATION_SHEET_NUM]/
-|   |       |-- [CREATION_SHEET_NUM].sheet
-|   |       |-- [CREATION_SHEET_NUM].params
-|   |       `-- [CREATION_SHEET_NUM].keys
+|   |       |-- sheet
+|   |       `-- keys
 |   |-- databases/
 |   |   `-- [CREATION_SHEET_NUM]/
-|   |       |-- 1.bdb
+|   |       |-- 1
 |   |       |-- ...
-|   |       |-- 1024.bdb
+|   |       |-- 1024
 |   |       `-- ...
 |   |-- peer/
 |   |   |-- self
@@ -118,6 +117,106 @@ http[s]://Node[:port]/...
     |-- geolist_ITA.txt.asc
     |(...)
     `-- index.html
+
+4.1= pks/add =
+
+  The « pks/add » url is used to POST OpenPGP keys, in order to :
+
+  * Publish new OpenUDC keys (OpenPGP keys with udid2)
+  * Publish changes on an OpenUDC key (new signatures, revocations)
+
+  This url MUST accept OpenUDC certificates and MAY accept OpenPGP keys in a larger
+  way.
+
+4.2= pks/lookup =
+
+  The « pks/lookup » url is used to search for OpenUDC certificates. It accepts a
+  « search » parameter containing the string to match in OpenUDC certificates.
+
+4.3= udc/create =
+
+  The « udc/create » url is used to POST a creation sheet with attached signatures.
+  The HTTP header « multipart/msigned » MUST be used in order to attach signatures.
+  The « udc/create » url MAY be called multiple times with the same creation sheet
+  but different signatures to divide the signing process in multiple waves.
+
+4.4= udc/lookup =
+
+  The « udc/lookup » url is used to search for some String in all available
+  creation sheets on the server. It accepts a « search » parameter containing the
+  string to match. The result is a list of creation sheet hashes.
+
+4.5= udc/validate =
+
+  The « udc/validate » url is used to POST transactions in order to verify them
+  and consider the new relations between coins and owners.
+
+4.6= udc/log =
+4.6.1 udc/log.1
+4.6.2 udc/log.n
+
+4.7= udc/creations =
+
+  This section focuses on creation sheets and their data.
+
+4.7.1 udc/creations/initkeys
+
+  The « udc/creations/initkeys » url is used to retrieve the initial public keys
+  used to sign the root creation sheet. Keys MUST be given in ASCII-armored version.
+
+4.7.2 udc/creations/last
+
+  The « udc/creations/last » is a shortcut to access the last validated creation
+  sheet.
+
+4.7.3 udc/creations/[CREATION_SHEET_NUM]/sheet
+
+  The « [CREATION_SHEET_NUM]/sheet » url gives the raw version of the creation
+  sheet, without params and/or signature.
+
+4.7.4 udc/creations/[CREATION_SHEET_NUM]/keys
+
+  The « [CREATION_SHEET_NUM]/params » url gives the raw version of the creation
+  sheet, without params and/or signature.
+
+4.8 udc/databases/[CREATION_SHEET_NUM]/[POWER] =
+
+  The « udc/databases/[CREATION_SHEET_NUM]/[POWER] » url is used to retrieve raw
+  database giving the relation of ownership of each coin whose value is [POWER].
+
+4.9= udc/peer =
+
+  This url covers the peering system used to distribute OpenUDC data.
+
+4.9.1 udc/peer/self
+
+  This url gives peering information about the host, notably :
+
+  * Which coins it manages (2^1, 2^2, 2^4, ..., 2^9, ...)
+  * Which individual it manages money ownership
+
+  Indeed, each node MAY only manage some type of coins. In the same idea, each node
+  MAY manage the coins of only some individuals.
+
+  The goal of such filters is to distribute the whole OpenUDC database, with each
+  node specialized in managing whatever his adminstrator wants to be in touch with.
+
+4.9.2 udc/peer/register
+
+  Allows any peer to register to the current peer. When this url is called,
+  the current peer checks the « udc/peer/self » of the registering peer to know
+  which data it is interested in, allowing the current peer to build the distribution
+  routes of incoming data.
+
+4.9.3 udc/peer/list
+
+  Lists the peers registered to the current peer. A node MUST notificate those peers
+  when new data comes in, accordingly to their registering rules.
+
+4.10= udc/transactions/[ISSUER_FINGERPRINT]/ =
+
+
+4.11= udid2/geolist_[COUNTRY_3LETTERS].txt =
 
 5.== Data expected in the tree structure ==
 
